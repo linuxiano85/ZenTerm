@@ -1,3 +1,7 @@
+pub mod config;
+pub mod gpu;
+pub mod ui;
+
 pub fn hello() -> &'static str {
     "engine ok"
 }
