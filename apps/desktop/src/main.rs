@@ -7,8 +7,10 @@ fn main() {
     // Install panic guard before doing anything else
     install_panic_guard();
     
-    // Test panic handling (remove this line after testing)
-    // panic!("Testing panic handler - this should restore terminal properly");
+    // Test panic handling - uncomment to test panic handler
+    if std::env::args().any(|arg| arg == "--test-panic") {
+        panic!("Testing panic handler - this should restore terminal properly");
+    }
     
     // Run the TUI application
     if let Err(e) = run_tui() {
