@@ -1,40 +1,18 @@
-use winit::{
-    event::{Event, WindowEvent},
-    event_loop::EventLoop,
-    window::WindowBuilder,
-};
+use engine::{install_panic_guard, run_tui};
 
 fn main() {
-    // Event loop e finestra base
-    let event_loop = EventLoop::new().expect("Failed to create event loop");
-    let window = WindowBuilder::new()
-        .with_title("Warp-like Terminal (Bootstrap)")
-        .build(&event_loop)
-        .expect("Failed to build window");
-
-    println!("Engine says: {}", engine::hello());
-
-    // Loop eventi (placeholder per renderer GPU e input handling)
-    event_loop
-        .run(move |event, elwt| match event {
-            Event::WindowEvent {
-                event,
-                window_id: _,
-            } => match event {
-                WindowEvent::CloseRequested => elwt.exit(),
-                WindowEvent::Resized(_size) => {
-                    // Qui in futuro: resize del renderer
-                }
-                WindowEvent::RedrawRequested => {
-                    // Qui in futuro: render GPU (wgpu)
-                }
-                _ => {}
-            },
-            Event::AboutToWait => {
-                // Qui in futuro: scheduling render/frame
-                window.request_redraw();
-            }
-            _ => {}
-        })
-        .expect("Event loop error");
+    // Initialize logging
+    env_logger::init();
+    
+    // Install panic guard before doing anything else
+    install_panic_guard();
+    
+    // Test panic handling (remove this line after testing)
+    // panic!("Testing panic handler - this should restore terminal properly");
+    
+    // Run the TUI application
+    if let Err(e) = run_tui() {
+        eprintln!("Application error: {}", e);
+        std::process::exit(1);
+    }
 }
