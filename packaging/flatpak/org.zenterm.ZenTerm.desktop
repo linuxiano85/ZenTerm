@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=ZenTerm
+Comment=Hybrid GUI/TUI terminal with optional voice (Linux-first)
+Exec=zenterm --gui
+Icon=org.zenterm.ZenTerm
+Terminal=false
+Type=Application
+Categories=Utility;System;
