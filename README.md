@@ -1,6 +1,50 @@
-# ZenTerm
+# ZenTerm - Advanced Terminal User Interface
 
-**Birthday MVP** - Linux-first voice-driven terminal ecosystem
+Modern TUI application with advanced features including wizard setup, settings management, and responsive design.
+
+## Features
+
+### Sprint Turbo Implementation
+- **Stability & UX**: Panic guard with terminal restoration, quit confirmation, global help overlay, graceful exits
+- **Visual Polish**: Centralized dark/light theme palette, responsive layout, accented borders  
+- **Performance**: Debounced configuration saving, buffer reuse, optimized rendering
+
+### Core Functionality
+
+#### Wizard Mode
+- Interactive setup process for new installations
+- GPU memory limit configuration (10-100%)
+- Quit confirmation with y/n prompt
+- Structured logging: `wizard.start`, `wizard.complete`, `wizard.abort`
+
+#### Runtime Mode  
+- Main application interface
+- Access to settings and help
+- Clean quit functionality
+
+#### Settings Mode
+- GPU limit adjustment with ↑/↓ keys
+- Theme toggle between dark and light modes
+- Ctrl+C graceful exit support
+- Debounced saving (configurable 50-10000ms)
+- Structured logging: `settings.open`, `settings.close`, `settings.change.*`
+
+#### Help System
+- Global help overlay accessible with `?` key
+- Comprehensive keybinding documentation
+- Close with `?` or `ESC`
+- Structured logging: `help.show`, `help.hide`
+
+#### Responsive Design
+- Footer hidden when terminal height < 18 rows
+- Compact header when terminal height < 12 rows
+- Automatic layout adaptation
+
+#### Advanced Features
+- **Panic Guard**: Automatic terminal restoration on panic
+- **Structured Logging**: Comprehensive event tracking including `gpu.limit.apply`
+- **Theme System**: Centralized palette with dark/light mode support
+- **Configuration**: JSON-based config with debounced persistence
 
 > ⚠️ **Early Development**: This is the Birthday MVP release. Not production-ready but architecturally aligned with the project vision.
 
