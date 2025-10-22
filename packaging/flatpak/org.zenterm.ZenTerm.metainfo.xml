@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.zenterm.ZenTerm</id>
+  <name>ZenTerm</name>
+  <summary>Hybrid GUI/TUI terminal with optional voice (Linux-first)</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT OR Apache-2.0</project_license>
+  <developer_name>ZenTerm Contributors</developer_name>
+  <launchable type="desktop-id">org.zenterm.ZenTerm.desktop</launchable>
+  <url type="homepage">https://github.com/linuxiano85/ZenTerm</url>
+  <description>
+    <p>ZenTerm è un ambiente terminale ibrido con GUI minimal e base per TUI e voce, pensato per Linux.</p>
+  </description>
+  <releases>
+    <release version="0.2.0-pre" date="2025-10-08">
+      <description>
+        <p>Birthday GUI MVP + packaging Flatpak iniziale.</p>
+      </description>
+    </release>
+  </releases>
+</component>

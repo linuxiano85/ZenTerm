@@ -3,6 +3,10 @@ name = "app-desktop"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "zenterm"
+path = "src/main.rs"
+
 [dependencies]
 engine = { path = "../../crates/engine" }
 eframe = "0.27"
