@@ -376,6 +376,43 @@ impl SharedAppState {
         guard.event_bus.sender()
     }
 
+    /// Execute a command by id using the shared state's event bus.
+    /// This maps high-level command IDs to concrete AppEvent messages.
+    pub fn execute_command(&self, id: &str) -> Result<(), String> {
+        let sender = self.get_event_sender();
+
+        match id {
+            "gpu.limit.25" => sender
+                .send(AppEvent::GpuLimitChanged(25))
+                .map_err(|e| e.to_string()),
+            "gpu.limit.50" => sender
+                .send(AppEvent::GpuLimitChanged(50))
+                .map_err(|e| e.to_string()),
+            "gpu.limit.75" => sender
+                .send(AppEvent::GpuLimitChanged(75))
+                .map_err(|e| e.to_string()),
+            "gpu.limit.100" => sender
+                .send(AppEvent::GpuLimitChanged(100))
+                .map_err(|e| e.to_string()),
+            "theme.toggle" => {
+                let dark = !self.get_theme().dark_mode;
+                sender
+                    .send(AppEvent::ThemeToggled(dark))
+                    .map_err(|e| e.to_string())
+            }
+            "voice.toggle" => {
+                // Toggle voice based on current status
+                let enabled = self.get_voice_status() == "OFF";
+                sender
+                    .send(AppEvent::VoiceToggled(enabled))
+                    .map_err(|e| e.to_string())
+            }
+            "wizard.open" => sender.send(AppEvent::WizardOpened).map_err(|e| e.to_string()),
+            "system.quit" => sender.send(AppEvent::QuitRequested).map_err(|e| e.to_string()),
+            _ => Err(format!("Command '{}' not found", id)),
+        }
+    }
+
     /// Check if config is dirty (needs saving)
     pub fn is_config_dirty(&self) -> bool {
         let guard = self.inner.lock().unwrap();
@@ -489,5 +526,26 @@ mod tests {
         state.process_events();
 
         assert!(state.is_quit_requested());
+    }
+
+    #[test]
+    fn test_execute_command_helper() {
+        let state = SharedAppState::new();
+
+        // Execute GPU command
+        assert!(state.execute_command("gpu.limit.25").is_ok());
+        state.process_events();
+        let (gpu_limit, _) = state.get_gpu_status();
+        assert_eq!(gpu_limit, 25);
+
+        // Execute theme toggle
+        let initial_theme = state.get_theme().dark_mode;
+        assert!(state.execute_command("theme.toggle").is_ok());
+        state.process_events();
+        let new_theme = state.get_theme().dark_mode;
+        assert_eq!(new_theme, !initial_theme);
+
+        // Unknown command returns error
+        assert!(state.execute_command("nonexistent.command").is_err());
     }
 }
