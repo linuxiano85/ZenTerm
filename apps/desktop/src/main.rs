@@ -285,27 +285,68 @@ impl ZenTermApp {
     }
 
     fn render_wizard_modal(&mut self, ctx: &egui::Context) {
-        // For now, just show a simple modal - in a full implementation this would be multi-step
+        // Multi-step wizard UI
         egui::Window::new("Setup Wizard")
             .collapsible(false)
             .resizable(false)
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
             .show(ctx, |ui| {
                 ui.vertical_centered(|ui| {
-                    ui.heading("Welcome to ZenTerm!");
-                    ui.separator();
+                    let step_data = self.shared_state.get_wizard_current_step_data();
+                    let progress = self.shared_state.wizard_progress();
 
-                    ui.label("This is the Birthday MVP setup wizard.");
-                    ui.label("Full multi-step wizard implementation coming soon.");
+                    ui.heading(&step_data.title);
+                    ui.add_space(4.0);
 
-                    ui.separator();
+                    ui.label(&step_data.description);
+                    ui.add_space(8.0);
 
-                    if ui.button("Close").clicked() {
-                        let sender = self.shared_state.get_event_sender();
-                        if let Err(e) = sender.send(AppEvent::WizardClosed) {
-                            error!("Failed to send wizard close event: {}", e);
+                    // Progress bar
+                    let (w, _) = ui.allocate_exact_size([400.0, 12.0].into(), egui::Sense::hover());
+                    ui.put(w, egui::ProgressBar::from_f32(progress).show_percentage());
+                    ui.add_space(8.0);
+
+                    ui.horizontal(|ui| {
+                        // Previous
+                        if ui
+                            .add_enabled(self.shared_state.wizard_can_go_previous(), egui::Button::new("Prev"))
+                            .clicked()
+                        {
+                            let sender = self.shared_state.get_event_sender();
+                            if let Err(e) = sender.send(AppEvent::WizardPrev) {
+                                error!("Failed to send wizard prev event: {}", e);
+                            }
                         }
-                    }
+
+                        // Skip
+                        if step_data.can_skip && ui.button("Skip").clicked() {
+                            let sender = self.shared_state.get_event_sender();
+                            if let Err(e) = sender.send(AppEvent::WizardSkip) {
+                                error!("Failed to send wizard skip event: {}", e);
+                            }
+                        }
+
+                        // Next
+                        if ui
+                            .add_enabled(self.shared_state.wizard_can_go_next(), egui::Button::new("Next"))
+                            .clicked()
+                        {
+                            let sender = self.shared_state.get_event_sender();
+                            if let Err(e) = sender.send(AppEvent::WizardNext) {
+                                error!("Failed to send wizard next event: {}", e);
+                            }
+                        }
+
+                        ui.add_space(16.0);
+
+                        // Close button (always available)
+                        if ui.button("Close").clicked() {
+                            let sender = self.shared_state.get_event_sender();
+                            if let Err(e) = sender.send(AppEvent::WizardClosed) {
+                                error!("Failed to send wizard close event: {}", e);
+                            }
+                        }
+                    });
                 });
             });
     }

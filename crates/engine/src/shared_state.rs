@@ -181,6 +181,33 @@ impl SharedAppState {
                     LogLevel::Info,
                 );
             }
+            AppEvent::WizardNext => {
+                if guard.wizard.next_step() {
+                    self.add_log_message_internal(
+                        &mut guard,
+                        format!("Wizard advanced to step {:?}", guard.wizard.current_step()),
+                        LogLevel::Info,
+                    );
+                }
+            }
+            AppEvent::WizardPrev => {
+                if guard.wizard.previous_step() {
+                    self.add_log_message_internal(
+                        &mut guard,
+                        format!("Wizard moved back to step {:?}", guard.wizard.current_step()),
+                        LogLevel::Info,
+                    );
+                }
+            }
+            AppEvent::WizardSkip => {
+                if guard.wizard.skip_step() {
+                    self.add_log_message_internal(
+                        &mut guard,
+                        format!("Wizard skipped to step {:?}", guard.wizard.current_step()),
+                        LogLevel::Info,
+                    );
+                }
+            }
             AppEvent::WizardClosed => {
                 guard.wizard.close();
                 self.add_log_message_internal(
@@ -292,6 +319,42 @@ impl SharedAppState {
     pub fn is_wizard_open(&self) -> bool {
         let guard = self.inner.lock().unwrap();
         guard.wizard.is_open()
+    }
+
+    /// Get current wizard step data (thread-safe)
+    pub fn get_wizard_current_step_data(&self) -> crate::wizard::WizardStepData {
+        let guard = self.inner.lock().unwrap();
+        guard.wizard.current_step_data()
+    }
+
+    /// Check if wizard can advance to next step
+    pub fn wizard_can_go_next(&self) -> bool {
+        let guard = self.inner.lock().unwrap();
+        guard.wizard.can_go_next()
+    }
+
+    /// Check if wizard can go to previous step
+    pub fn wizard_can_go_previous(&self) -> bool {
+        let guard = self.inner.lock().unwrap();
+        guard.wizard.can_go_previous()
+    }
+
+    /// Get wizard progress (0.0..=1.0)
+    pub fn wizard_progress(&self) -> f32 {
+        let guard = self.inner.lock().unwrap();
+        guard.wizard.progress()
+    }
+
+    /// Get current wizard step index (0-based)
+    pub fn wizard_current_step_index(&self) -> usize {
+        let guard = self.inner.lock().unwrap();
+        guard.wizard.current_step_index()
+    }
+
+    /// Get total number of wizard steps
+    pub fn wizard_total_steps(&self) -> usize {
+        let guard = self.inner.lock().unwrap();
+        guard.wizard.total_steps()
     }
 
     /// Check if quit was requested (thread-safe)
