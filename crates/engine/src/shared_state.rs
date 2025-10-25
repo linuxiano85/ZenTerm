@@ -177,6 +177,11 @@ impl SharedAppState {
                 guard.wizard.open();
                 self.add_log_message_internal(
                     &mut guard,
+                    "wizard.start".to_string(),
+                    LogLevel::Info,
+                );
+                self.add_log_message_internal(
+                    &mut guard,
                     "Setup wizard opened".to_string(),
                     LogLevel::Info,
                 );
@@ -188,6 +193,18 @@ impl SharedAppState {
                         format!("Wizard advanced to step {:?}", guard.wizard.current_step()),
                         LogLevel::Info,
                     );
+                    // If we've reached completion, emit structured event and request config save
+                    if matches!(guard.wizard.current_step(), crate::wizard::WizardStep::Complete) {
+                        self.add_log_message_internal(
+                            &mut guard,
+                            "wizard.complete".to_string(),
+                            LogLevel::Info,
+                        );
+                        // Request immediate save of configuration
+                        if let Err(e) = guard.event_bus.sender().send(AppEvent::ConfigSaveRequested) {
+                            error!("Failed to request config save: {}", e);
+                        }
+                    }
                 }
             }
             AppEvent::WizardPrev => {
