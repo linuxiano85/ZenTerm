@@ -1,0 +1,25 @@
+app-id: org.zenterm.ZenTerm
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: zenterm
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=x11
+  - --device=dri
+  - --env=RUST_LOG=info
+modules:
+  - name: zenterm
+    buildsystem: simple
+    build-commands:
+      - . /usr/lib/sdk/rust-stable/enable && cargo fetch --locked || true
+      - . /usr/lib/sdk/rust-stable/enable && cargo build --frozen --release --bin zenterm
+      - install -Dm755 target/release/zenterm /app/bin/zenterm
+      - install -Dm644 packaging/flatpak/org.zenterm.ZenTerm.desktop /app/share/applications/org.zenterm.ZenTerm.desktop
+      - install -Dm644 packaging/flatpak/org.zenterm.ZenTerm.metainfo.xml /app/share/metainfo/org.zenterm.ZenTerm.metainfo.xml
+    sources:
+      - type: dir
+        path: .
