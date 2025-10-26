@@ -15,6 +15,12 @@ pub enum AppEvent {
     ThemeToggled(bool), // true = dark mode
     VoiceToggled(bool), // true = enabled
     WizardOpened,
+    /// Advance wizard to next step
+    WizardNext,
+    /// Go back to previous wizard step
+    WizardPrev,
+    /// Skip current wizard step (if allowed)
+    WizardSkip,
     WizardClosed,
     ConfigSaveRequested,
     LogMessage(String),
