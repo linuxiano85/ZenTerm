@@ -21,6 +21,17 @@ jobs:
           flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
           flatpak install -y flathub org.freedesktop.Platform//23.08 org.freedesktop.Sdk//23.08 org.freedesktop.Sdk.Extension.rust-stable//23.08
 
+      - name: Set up Node.js (build frontend)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build frontend
+        working-directory: .
+        run: |
+          npm ci --prefer-offline --no-audit --progress=false || true
+          npm run build || true
+
       - name: Build Flatpak (builder)
         run: |
           rm -rf build-dir repo-dir zenterm.flatpak

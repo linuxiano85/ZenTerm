@@ -15,8 +15,9 @@ modules:
   - name: zenterm
     buildsystem: simple
     build-commands:
-      - . /usr/lib/sdk/rust-stable/enable && cargo fetch --locked || true
-      - . /usr/lib/sdk/rust-stable/enable && cargo build --frozen --release --bin zenterm
+      - [ -f /usr/lib/sdk/rust-stable/enable ] || ln -s /usr/lib/sdk/rust-stable/enable.sh /usr/lib/sdk/rust-stable/enable || true
+      - . /usr/lib/sdk/rust-stable/enable.sh && cargo fetch --locked || true
+      - . /usr/lib/sdk/rust-stable/enable.sh && cargo build --frozen --release --bin zenterm
       - install -Dm755 target/release/zenterm /app/bin/zenterm
       - install -Dm644 packaging/flatpak/org.zenterm.ZenTerm.desktop /app/share/applications/org.zenterm.ZenTerm.desktop
       - install -Dm644 packaging/flatpak/org.zenterm.ZenTerm.metainfo.xml /app/share/metainfo/org.zenterm.ZenTerm.metainfo.xml

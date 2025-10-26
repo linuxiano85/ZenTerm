@@ -9,7 +9,8 @@
             "type": "lldb",
             "request": "launch",
             "name": "Launch",
-            "program": "${workspaceFolder}/ZenTerm",
+            "preLaunchTask": "cargo: build app-desktop",
+            "program": "${workspaceFolder}/target/debug/zenterm",
             "args": [],
             "cwd": "${workspaceFolder}"
         },
