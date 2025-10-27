@@ -177,9 +177,53 @@ impl SharedAppState {
                 guard.wizard.open();
                 self.add_log_message_internal(
                     &mut guard,
+                    "wizard.start".to_string(),
+                    LogLevel::Info,
+                );
+                self.add_log_message_internal(
+                    &mut guard,
                     "Setup wizard opened".to_string(),
                     LogLevel::Info,
                 );
+            }
+            AppEvent::WizardNext => {
+                if guard.wizard.next_step() {
+                    self.add_log_message_internal(
+                        &mut guard,
+                        format!("Wizard advanced to step {:?}", guard.wizard.current_step()),
+                        LogLevel::Info,
+                    );
+                    // If we've reached completion, emit structured event and request config save
+                    if matches!(guard.wizard.current_step(), crate::wizard::WizardStep::Complete) {
+                        self.add_log_message_internal(
+                            &mut guard,
+                            "wizard.complete".to_string(),
+                            LogLevel::Info,
+                        );
+                        // Request immediate save of configuration
+                        if let Err(e) = guard.event_bus.sender().send(AppEvent::ConfigSaveRequested) {
+                            error!("Failed to request config save: {}", e);
+                        }
+                    }
+                }
+            }
+            AppEvent::WizardPrev => {
+                if guard.wizard.previous_step() {
+                    self.add_log_message_internal(
+                        &mut guard,
+                        format!("Wizard moved back to step {:?}", guard.wizard.current_step()),
+                        LogLevel::Info,
+                    );
+                }
+            }
+            AppEvent::WizardSkip => {
+                if guard.wizard.skip_step() {
+                    self.add_log_message_internal(
+                        &mut guard,
+                        format!("Wizard skipped to step {:?}", guard.wizard.current_step()),
+                        LogLevel::Info,
+                    );
+                }
             }
             AppEvent::WizardClosed => {
                 guard.wizard.close();
@@ -294,6 +338,42 @@ impl SharedAppState {
         guard.wizard.is_open()
     }
 
+    /// Get current wizard step data (thread-safe)
+    pub fn get_wizard_current_step_data(&self) -> crate::wizard::WizardStepData {
+        let guard = self.inner.lock().unwrap();
+        guard.wizard.current_step_data()
+    }
+
+    /// Check if wizard can advance to next step
+    pub fn wizard_can_go_next(&self) -> bool {
+        let guard = self.inner.lock().unwrap();
+        guard.wizard.can_go_next()
+    }
+
+    /// Check if wizard can go to previous step
+    pub fn wizard_can_go_previous(&self) -> bool {
+        let guard = self.inner.lock().unwrap();
+        guard.wizard.can_go_previous()
+    }
+
+    /// Get wizard progress (0.0..=1.0)
+    pub fn wizard_progress(&self) -> f32 {
+        let guard = self.inner.lock().unwrap();
+        guard.wizard.progress()
+    }
+
+    /// Get current wizard step index (0-based)
+    pub fn wizard_current_step_index(&self) -> usize {
+        let guard = self.inner.lock().unwrap();
+        guard.wizard.current_step_index()
+    }
+
+    /// Get total number of wizard steps
+    pub fn wizard_total_steps(&self) -> usize {
+        let guard = self.inner.lock().unwrap();
+        guard.wizard.total_steps()
+    }
+
     /// Check if quit was requested (thread-safe)
     pub fn is_quit_requested(&self) -> bool {
         let guard = self.inner.lock().unwrap();
@@ -311,6 +391,43 @@ impl SharedAppState {
     pub fn get_event_sender(&self) -> crossbeam_channel::Sender<AppEvent> {
         let guard = self.inner.lock().unwrap();
         guard.event_bus.sender()
+    }
+
+    /// Execute a command by id using the shared state's event bus.
+    /// This maps high-level command IDs to concrete AppEvent messages.
+    pub fn execute_command(&self, id: &str) -> Result<(), String> {
+        let sender = self.get_event_sender();
+
+        match id {
+            "gpu.limit.25" => sender
+                .send(AppEvent::GpuLimitChanged(25))
+                .map_err(|e| e.to_string()),
+            "gpu.limit.50" => sender
+                .send(AppEvent::GpuLimitChanged(50))
+                .map_err(|e| e.to_string()),
+            "gpu.limit.75" => sender
+                .send(AppEvent::GpuLimitChanged(75))
+                .map_err(|e| e.to_string()),
+            "gpu.limit.100" => sender
+                .send(AppEvent::GpuLimitChanged(100))
+                .map_err(|e| e.to_string()),
+            "theme.toggle" => {
+                let dark = !self.get_theme().dark_mode;
+                sender
+                    .send(AppEvent::ThemeToggled(dark))
+                    .map_err(|e| e.to_string())
+            }
+            "voice.toggle" => {
+                // Toggle voice based on current status
+                let enabled = self.get_voice_status() == "OFF";
+                sender
+                    .send(AppEvent::VoiceToggled(enabled))
+                    .map_err(|e| e.to_string())
+            }
+            "wizard.open" => sender.send(AppEvent::WizardOpened).map_err(|e| e.to_string()),
+            "system.quit" => sender.send(AppEvent::QuitRequested).map_err(|e| e.to_string()),
+            _ => Err(format!("Command '{}' not found", id)),
+        }
     }
 
     /// Check if config is dirty (needs saving)
@@ -426,5 +543,26 @@ mod tests {
         state.process_events();
 
         assert!(state.is_quit_requested());
+    }
+
+    #[test]
+    fn test_execute_command_helper() {
+        let state = SharedAppState::new();
+
+        // Execute GPU command
+        assert!(state.execute_command("gpu.limit.25").is_ok());
+        state.process_events();
+        let (gpu_limit, _) = state.get_gpu_status();
+        assert_eq!(gpu_limit, 25);
+
+        // Execute theme toggle
+        let initial_theme = state.get_theme().dark_mode;
+        assert!(state.execute_command("theme.toggle").is_ok());
+        state.process_events();
+        let new_theme = state.get_theme().dark_mode;
+        assert_eq!(new_theme, !initial_theme);
+
+        // Unknown command returns error
+        assert!(state.execute_command("nonexistent.command").is_err());
     }
 }
