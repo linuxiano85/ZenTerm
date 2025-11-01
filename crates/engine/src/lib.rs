@@ -1,3 +1,5 @@
+#![deny(warnings)]
+
 pub mod command_registry;
 pub mod config;
 pub mod event_bus;
@@ -21,7 +23,9 @@ pub fn hello() -> &'static str {
 }
 
 // Re-export the main TUI functions for easy access
-pub use ui::{install_panic_guard, run_tui};
+// TODO: Add ratatui, crossterm, and anyhow dependencies if TUI is needed
+// pub mod ui;
+// pub use ui::{install_panic_guard, run_tui};
 
 #[cfg(test)]
 mod tests {
