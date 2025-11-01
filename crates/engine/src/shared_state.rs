@@ -15,14 +15,12 @@ pub struct SharedAppState {
 struct AppStateInner {
     config: Config,
     event_bus: EventBus,
-    #[allow(dead_code)] // TODO: Implement command execution in GUI
-    command_registry: CommandRegistry,
+    _command_registry: CommandRegistry,
     gpu_mock: GpuMock,
     theme: Theme,
     voice_mock: Option<VoiceMock>,
     wizard: Wizard,
-    #[allow(dead_code)] // TODO: Implement manual save tracking
-    last_config_save: Option<Instant>,
+    _last_config_save: Option<Instant>,
     quit_requested: bool,
     log_messages: Vec<LogEntry>,
 }
@@ -75,12 +73,12 @@ impl SharedAppState {
         let inner = AppStateInner {
             config,
             event_bus,
-            command_registry: CommandRegistry::new(),
+            _command_registry: CommandRegistry::new(),
             gpu_mock,
             theme,
             voice_mock,
             wizard,
-            last_config_save: None,
+            _last_config_save: None,
             quit_requested: false,
             log_messages: Vec::new(),
         };

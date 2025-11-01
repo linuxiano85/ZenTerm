@@ -1,10 +1,12 @@
+#![deny(warnings)]
+
 use clap::{Parser, Subcommand};
 use eframe::egui;
 use engine::{AppEvent, SharedAppState};
 use log::{error, info};
+use serde_json::Value;
 use std::env;
 use std::thread;
-use serde_json::Value;
 // reqwest is optional at runtime; we use blocking client in a background thread
 use reqwest::blocking::Client;
 
@@ -133,36 +135,38 @@ impl eframe::App for ZenTermApp {
         }
 
         // Keyboard handling: toggle help with '?' (text event) and close help with ESC
-        for ev in &ctx.input().events {
-            match ev {
-                egui::Event::Text(t) => {
-                    if t == "?" {
-                        self.show_help = !self.show_help;
-                        if self.show_help {
-                            info!("help.show");
-                        } else {
-                            info!("help.hide");
+        ctx.input(|i| {
+            for ev in &i.events {
+                match ev {
+                    egui::Event::Text(t) => {
+                        if t == "?" {
+                            self.show_help = !self.show_help;
+                            if self.show_help {
+                                info!("help.show");
+                            } else {
+                                info!("help.hide");
+                            }
                         }
                     }
-                }
-                egui::Event::Key { key, pressed: true, .. } => {
-                    if *key == egui::Key::Escape {
-                        if self.show_help {
+                    egui::Event::Key {
+                        key, pressed: true, ..
+                    } => {
+                        if *key == egui::Key::Escape && self.show_help {
                             self.show_help = false;
                             info!("help.hide");
                         }
-                    }
-                    // If wizard is open, ESC cancels it via sending WizardClosed
-                    if *key == egui::Key::Escape && self.wizard_open {
-                        let sender = self.shared_state.get_event_sender();
-                        if let Err(e) = sender.send(AppEvent::WizardClosed) {
-                            error!("Failed to send wizard close event (ESC): {}", e);
+                        // If wizard is open, ESC cancels it via sending WizardClosed
+                        if *key == egui::Key::Escape && self.wizard_open {
+                            let sender = self.shared_state.get_event_sender();
+                            if let Err(e) = sender.send(AppEvent::WizardClosed) {
+                                error!("Failed to send wizard close event (ESC): {}", e);
+                            }
                         }
                     }
+                    _ => {}
                 }
-                _ => {}
             }
-        }
+        });
 
         // Main layout
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -336,7 +340,8 @@ impl ZenTermApp {
             // Send on button click or Enter
             let send_clicked = ui.button("Send").clicked();
 
-            if send_clicked || (input.lost_focus() && ui.input().key_pressed(egui::Key::Enter)) {
+            if send_clicked || (input.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)))
+            {
                 let trimmed = self.chat_input.trim().to_string();
                 if !trimmed.is_empty() {
                     let sender = self.shared_state.get_event_sender();
@@ -363,33 +368,55 @@ impl ZenTermApp {
                                             "messages": [{"role":"user","content": prompt}],
                                             "max_tokens": 250,
                                         });
-                                        let resp = client.post("https://api.openai.com/v1/chat/completions")
+                                        let resp = client
+                                            .post("https://api.openai.com/v1/chat/completions")
                                             .bearer_auth(key)
                                             .json(&body)
                                             .send();
                                         match resp {
                                             Ok(r) => match r.json::<Value>() {
                                                 Ok(json) => {
-                                                    if let Some(choice) = json.get("choices").and_then(|c| c.get(0)) {
-                                                        if let Some(msg) = choice.get("message").and_then(|m| m.get("content")).and_then(|c| c.as_str()) {
-                                                            let reply = format!("Bot: {}", msg.trim());
-                                                            let _ = sender_clone.send(AppEvent::LogMessage(reply));
+                                                    if let Some(choice) =
+                                                        json.get("choices").and_then(|c| c.get(0))
+                                                    {
+                                                        if let Some(msg) = choice
+                                                            .get("message")
+                                                            .and_then(|m| m.get("content"))
+                                                            .and_then(|c| c.as_str())
+                                                        {
+                                                            let reply =
+                                                                format!("Bot: {}", msg.trim());
+                                                            let _ = sender_clone
+                                                                .send(AppEvent::LogMessage(reply));
                                                             return;
                                                         }
                                                     }
-                                                    let _ = sender_clone.send(AppEvent::LogMessage("Bot: (no reply)".to_string()));
+                                                    let _ =
+                                                        sender_clone.send(AppEvent::LogMessage(
+                                                            "Bot: (no reply)".to_string(),
+                                                        ));
                                                 }
                                                 Err(e) => {
-                                                    let _ = sender_clone.send(AppEvent::LogMessage(format!("Bot: failed to parse response: {}", e)));
+                                                    let _ = sender_clone.send(
+                                                        AppEvent::LogMessage(format!(
+                                                            "Bot: failed to parse response: {}",
+                                                            e
+                                                        )),
+                                                    );
                                                 }
                                             },
                                             Err(e) => {
-                                                let _ = sender_clone.send(AppEvent::LogMessage(format!("Bot: request failed: {}", e)));
+                                                let _ = sender_clone.send(AppEvent::LogMessage(
+                                                    format!("Bot: request failed: {}", e),
+                                                ));
                                             }
                                         }
                                     }
                                     Err(e) => {
-                                        let _ = sender_clone.send(AppEvent::LogMessage(format!("Bot: failed to create HTTP client: {}", e)));
+                                        let _ = sender_clone.send(AppEvent::LogMessage(format!(
+                                            "Bot: failed to create HTTP client: {}",
+                                            e
+                                        )));
                                     }
                                 }
                             });
@@ -446,7 +473,7 @@ impl ZenTermApp {
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
             .show(ctx, |ui| {
                 ui.vertical_centered(|ui| {
-                    let titles = vec![
+                    let titles = [
                         "Welcome",
                         "GPU Configuration",
                         "Theme Selection",
@@ -454,7 +481,7 @@ impl ZenTermApp {
                         "Complete",
                     ];
 
-                    let descriptions = vec![
+                    let descriptions = [
                         "Welcome to ZenTerm Birthday MVP! This wizard will help configure the app.",
                         "Select a GPU limit to help manage resources.",
                         "Pick a theme: dark or light.",
@@ -494,7 +521,10 @@ impl ZenTermApp {
                         }
                         3 => {
                             ui.horizontal(|ui| {
-                                if ui.checkbox(&mut self.wizard_voice_enabled, "Enable Voice Mock").clicked() {
+                                if ui
+                                    .checkbox(&mut self.wizard_voice_enabled, "Enable Voice Mock")
+                                    .clicked()
+                                {
                                     // toggled via checkbox
                                 }
                             });
@@ -504,10 +534,8 @@ impl ZenTermApp {
 
                     ui.separator();
                     ui.horizontal(|ui| {
-                        if self.wizard_step > 0 {
-                            if ui.button("Back").clicked() {
-                                self.wizard_step = self.wizard_step.saturating_sub(1);
-                            }
+                        if self.wizard_step > 0 && ui.button("Back").clicked() {
+                            self.wizard_step = self.wizard_step.saturating_sub(1);
                         }
 
                         if self.wizard_step + 1 < titles.len() {
@@ -516,20 +544,32 @@ impl ZenTermApp {
                                 match self.wizard_step {
                                     1 => {
                                         let sender = self.shared_state.get_event_sender();
-                                        if let Err(e) = sender.send(AppEvent::GpuLimitChanged(self.wizard_gpu_limit)) {
+                                        if let Err(e) = sender
+                                            .send(AppEvent::GpuLimitChanged(self.wizard_gpu_limit))
+                                        {
                                             error!("Failed to send GPU limit from wizard: {}", e);
                                         }
                                     }
                                     2 => {
                                         let sender = self.shared_state.get_event_sender();
-                                        if let Err(e) = sender.send(AppEvent::ThemeToggled(self.wizard_theme_dark)) {
-                                            error!("Failed to send theme toggle from wizard: {}", e);
+                                        if let Err(e) = sender
+                                            .send(AppEvent::ThemeToggled(self.wizard_theme_dark))
+                                        {
+                                            error!(
+                                                "Failed to send theme toggle from wizard: {}",
+                                                e
+                                            );
                                         }
                                     }
                                     3 => {
                                         let sender = self.shared_state.get_event_sender();
-                                        if let Err(e) = sender.send(AppEvent::VoiceToggled(self.wizard_voice_enabled)) {
-                                            error!("Failed to send voice toggle from wizard: {}", e);
+                                        if let Err(e) = sender
+                                            .send(AppEvent::VoiceToggled(self.wizard_voice_enabled))
+                                        {
+                                            error!(
+                                                "Failed to send voice toggle from wizard: {}",
+                                                e
+                                            );
                                         }
                                     }
                                     _ => {}
@@ -597,31 +637,5 @@ impl ZenTermApp {
                 ui.colored_label(egui::Color32::LIGHT_BLUE, "Birthday MVP");
             });
         });
-    }
-
-    fn render_wizard_modal(&mut self, ctx: &egui::Context) {
-        // For now, just show a simple modal - in a full implementation this would be multi-step
-        egui::Window::new("Setup Wizard")
-            .collapsible(false)
-            .resizable(false)
-            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
-            .show(ctx, |ui| {
-                ui.vertical_centered(|ui| {
-                    ui.heading("Welcome to ZenTerm!");
-                    ui.separator();
-
-                    ui.label("This is the Birthday MVP setup wizard.");
-                    ui.label("Full multi-step wizard implementation coming soon.");
-
-                    ui.separator();
-
-                    if ui.button("Close").clicked() {
-                        let sender = self.shared_state.get_event_sender();
-                        if let Err(e) = sender.send(AppEvent::WizardClosed) {
-                            error!("Failed to send wizard close event: {}", e);
-                        }
-                    }
-                });
-            });
     }
 }
